@@ -1,12 +1,13 @@
 """
 AWS Glue Python Shell Job (0.0625 DPU)
-1. Connects to the private RDS PostgreSQL instance over the Glue VPC Connection using pg8000.
+1. Connects to the private RDS PostgreSQL instance over the Glue VPC Connection using pg8000 (with TLS/SSL).
 2. Seeds the `orders` table with sample data if it does not already exist (idempotent).
 3. Reads the records into a Pandas DataFrame and applies transformations (adds tax calculation & ingestion timestamp).
 4. Writes the transformed dataset as Snappy-compressed Parquet to S3 via the free S3 Gateway VPC Endpoint.
 """
 
 import datetime
+import ssl
 import sys
 from awsglue.utils import getResolvedOptions
 import pandas as pd
@@ -34,7 +35,12 @@ s3_output_path = args["S3_OUTPUT_PATH"]
 
 
 def seed_and_fetch_orders() -> pd.DataFrame:
-    print(f"Connecting to PostgreSQL RDS at {db_host}:{db_port}/{db_name}...")
+    print(f"Connecting to PostgreSQL RDS at {db_host}:{db_port}/{db_name} with SSL/TLS...")
+    # RDS PostgreSQL 16 enforces rds.force_ssl = 1 by default in pg_hba.conf
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
     conn = pg8000.dbapi.connect(
         user=db_user,
         password=db_pass,
@@ -42,6 +48,7 @@ def seed_and_fetch_orders() -> pd.DataFrame:
         port=db_port,
         database=db_name,
         timeout=30,
+        ssl_context=ssl_context,
     )
     cursor = conn.cursor()
 
