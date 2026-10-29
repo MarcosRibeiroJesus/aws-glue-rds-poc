@@ -25,7 +25,7 @@ variable "db_username" {
 variable "db_password" {
   description = "Master password for the RDS PostgreSQL instance (if empty, a random password is generated)"
   type        = string
-  default     = "123456"
+  default     = "SeekAndDestroy2026"
   sensitive   = true
 }
 
